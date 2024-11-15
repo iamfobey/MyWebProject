@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:latest
+    volumes:
+      - ../services/test/postgresql/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: pg_isready --username "${POSTGRES_USER}" --dbname "${POSTGRES_DB}"
+      interval: 1s
+      retries: 3
+      timeout: 5s
+    networks:
+      - app-network
+
+  test:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    volumes:
+      - ../backend/:/app
+    command: [ "go", "test", "-v", "./..." ]
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      USER_STORE_ADMIN_LOGIN: ${USER_STORE_ADMIN_LOGIN}
+      USER_STORE_ADMIN_PASSWORD: ${USER_STORE_ADMIN_PASSWORD}
+      JWT_KEY: ${JWT_KEY}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
